@@ -1,18 +1,17 @@
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.NoSuchElementException;
-import java.util.Scanner;
-import java.io.ObjectOutputStream;
+import java.io.ObjectInputStream;
 
-public class CreateSequentialFile
+public class ReadSequentialFile
 {
-    private static ObjectOutputStream output;
+    private static ObjectInputStream input;
 
     public static void main(String[] args)
     {
         openFile();
-        addRecords();
+        readRecords();
         closeFile();
     }
 
@@ -20,40 +19,40 @@ public class CreateSequentialFile
     {
         try
         {
-            output = new ObjectOutputStream(Files.newOutputStream(Paths.get("clients.ser")));
+            input = new ObjectInputStream(Files.newInputStream(Paths.get("clients.ser")));
         }
         catch (IOException ioException)
         {
-            System.err.println("Error opening file. Terminating.");
+            System.err.println("Error opening file.");
             System.exit(1);
         }
     }
 
-    public static void addRecords()
+    public static void readRecords() 
     {
-        Scanner input = new Scanner(System.in);
+        System.out.printf("%-10s%-12s%-12s%10s%n", "Account", "First Name", "Last Name", "Balance");
 
-        System.out.printf("%s%n%s%n? ", 
-            "Enter account number, first name, last name and balance.", "Enter end-of-file indicator to end input.");
-
-        while (input.hasNext())
+        try
         {
-            try
+            while (true)
             {
-                Account record = new Account(input.nextInt(), input.next(), input.next(), input.nextDouble());
-                output.writeObject(record);
-                System.out.print("? ");
+                Account record = (Account) input.readObject();
+                System.out.printf("%-10d%-12s%-12s%10.2f%n",  
+                    record.getAccount(), record.getFirstName(), 
+                    record.getLastName(), record.getBalance());
             }
-            catch (NoSuchElementException elementException)
-            {
-                System.err.println("Invalid input. Please try again.");
-                input.nextLine();
-            }
-            catch (IOException ioException)
-            {
-                System.err.println("Error writing to file. Terminating.");
-                break;
-            }
+        }
+        catch (EOFException endOfFileException)
+        {
+            System.out.println("No more records.");
+        }
+        catch (ClassNotFoundException classNotFoundException)
+        {
+            System.err.println("Invalid object type. Terminating.");
+        }
+        catch (IOException ioException)
+        {
+            System.err.println("Error reading from file. Terminating.");
         }
     }
 
@@ -61,11 +60,12 @@ public class CreateSequentialFile
     {
         try
         {
-            if (output != null) output.close();
+            if (input != null) input.close();
         }
         catch (IOException ioException)
         {
             System.err.println("Error closing file. Terminating.");
+            System.exit(1);
         }
     }
 }
